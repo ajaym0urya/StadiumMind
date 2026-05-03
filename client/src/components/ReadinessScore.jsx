@@ -12,7 +12,7 @@ export default function ReadinessScore() {
   useEffect(() => {
     const fetchScore = async () => {
       try {
-        const { data } = await getChecklist(user._id);
+        const { data } = await getChecklist(user.uid);
         if (data.success) setScore(data.data.progress.percentage);
       } catch { setScore(user.readinessScore || 0); }
       setLoading(false);

@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+__pycache__/
+*.py[cod]
+*$py.class
 
 # Editor directories and files
 .vscode/*
@@ -18,9 +21,9 @@ dist-ssr
 .idea
 .DS_Store
 *.suo
+server/firebase-service-account.json
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 .env
-

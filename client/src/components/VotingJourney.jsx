@@ -12,7 +12,7 @@ export default function VotingJourney() {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const { data } = await getJourney(user._id);
+        const { data } = await getJourney(user.uid);
         if (data.success) setJourney(data.data);
       } catch (e) { console.error(e); }
       setLoading(false);

@@ -15,7 +15,7 @@ export default function ChatAssistant({ fullHeight = false }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await getChatHistory(user._id);
+        const { data } = await getChatHistory(user.uid);
         if (data.success && data.data.length > 0) {
           setMessages(data.data);
         } else {
@@ -57,7 +57,7 @@ export default function ChatAssistant({ fullHeight = false }) {
     setSending(true);
 
     try {
-      const { data } = await sendChatMessage(user._id, userMsg);
+      const { data } = await sendChatMessage(user.uid, userMsg);
       if (data.success) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.data.reply }]);
         speak(data.data.reply);

@@ -38,7 +38,7 @@ export default function QuizSection() {
     }));
     
     try {
-      const { data } = await submitQuiz(user._id, answers);
+      const { data } = await submitQuiz(user.uid, answers);
       if (data.success) {
         setResults(data.data);
         setSubmitted(true);

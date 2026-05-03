@@ -14,7 +14,7 @@ export default function SmartChecklist({ onProgressChange }) {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const { data } = await getChecklist(user._id);
+        const { data } = await getChecklist(user.uid);
         if (data.success) {
           setItems(data.data.items);
           setProgress(data.data.progress);
@@ -30,7 +30,7 @@ export default function SmartChecklist({ onProgressChange }) {
     if (!item) return;
 
     try {
-      const { data } = await updateChecklistItem(user._id, itemKey, !item.completed);
+      const { data } = await updateChecklistItem(user.uid, itemKey, !item.completed);
       if (data.success) {
         setItems(data.data.items);
         setProgress(data.data.progress);

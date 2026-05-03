@@ -33,7 +33,7 @@ export default function ScenarioSimulator() {
     setSelectedScenario(scenarioId);
     setLoading(true);
     try {
-      const { data } = await runScenario(user._id, scenarioId);
+      const { data } = await runScenario(user.uid, scenarioId);
       if (data.success) setResult(data.data);
     } catch (e) { console.error(e); }
     setLoading(false);

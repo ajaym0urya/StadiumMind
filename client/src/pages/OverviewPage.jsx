@@ -22,8 +22,8 @@ export default function OverviewPage() {
     const load = async () => {
       try {
         const [cRes, jRes] = await Promise.allSettled([
-          getChecklist(user._id),
-          getJourney(user._id),
+          getChecklist(user.uid),
+          getJourney(user.uid),
         ]);
         if (cRes.status === 'fulfilled' && cRes.value.data.success) {
           const p = cRes.value.data.data.progress;

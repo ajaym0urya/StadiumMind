@@ -176,3 +176,6 @@ VITE_FIREBASE_PROJECT_ID=...
 Built for the **VirtualPromptWar** Hackathon by Google & Hack2skill.
 
 #VirtualPromptWar #GoogleCloud #Hack2Skill #BuiltWithGemini
+"# ElecTech" 
+"# ElecTech" 
+"# ElecTech" 

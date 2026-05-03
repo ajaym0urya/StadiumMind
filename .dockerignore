@@ -1,0 +1,9 @@
+node_modules
+__pycache__
+*.pyc
+.git
+.env
+client/node_modules
+client/dist
+server/__pycache__
+firebase-service-account.json

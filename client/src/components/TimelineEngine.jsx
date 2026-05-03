@@ -12,7 +12,7 @@ export default function TimelineEngine() {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const { data } = await getTimeline(user._id);
+        const { data } = await getTimeline(user.uid);
         if (data.success) setTimeline(data.data);
       } catch (e) { console.error(e); }
       setLoading(false);

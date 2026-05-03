@@ -15,7 +15,7 @@ export default function BoothAssistant() {
     if (!pincode.trim()) return;
     setLoading(true);
     try {
-      const { data } = await getBoothGuide(user._id, pincode, area);
+      const { data } = await getBoothGuide(user.uid, pincode, area);
       if (data.success) setGuide(data.data);
     } catch (e) { console.error(e); }
     setLoading(false);
