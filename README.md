@@ -1,181 +1,94 @@
-# ElecTech — Personalized Election Journey Assistant
+# 🗳️ ElecTech: AI-First Election Assistant
 
-> 🗳️ AI-powered platform that guides Indian citizens through the entire voting process using official Election Commission of India (ECI) data.
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react)](https://reactjs.org/)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-8E75C2?style=for-the-badge&logo=google-gemini&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 
-## 🏆 Hackathon Evaluation Scorecard
-
-| Category | Score | Details |
-|---|---|---|
-| **Code Quality** | 99% | Modular architecture, JSDoc, ESLint, DRY |
-| **Security** | 99% | Helmet, JWT, Rate Limiting, CSP, NoSQL Sanitize |
-| **Efficiency** | 100% | Caching, cooldowns, lazy loading, code splitting |
-| **Testing** | 99% | 122 tests, 15 suites, 100% pass rate |
-| **Accessibility** | 99% | WCAG 2.1 AA, ARIA, skip-links, keyboard nav |
-| **Google Services** | 100% | Gemini AI, Firebase Auth, Cloud Translate, Cloud NLP, Analytics |
-| **Problem Statement** | 100% | ECI-compliant, neutral, multilingual |
+> **Empowering citizens through AI-driven electoral education.** ElecTech is a sophisticated, AI-powered platform designed to simplify the voting journey for Indian citizens, providing personalized guidance based on official ECI standards.
 
 ---
 
-## 🏗️ Architecture
+## 🌟 Core Experience
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                     FRONTEND (Vite + React)               │
-│  React 19 · Tailwind CSS 4 · Framer Motion · Leaflet     │
-│  Firebase Auth · Google Analytics 4 · Code Splitting      │
-├──────────────────────────────────────────────────────────┤
-│                     BACKEND (Express.js)                  │
-│  REST API · JWT Auth · Helmet · Rate Limiting · Morgan    │
-├──────────────────────────────────────────────────────────┤
-│                    AI PIPELINE (4-Tier Fallback)          │
-│  1. Cache → 2. Mistral AI → 3. Gemini AI → 4. Hardcoded │
-├──────────────────────────────────────────────────────────┤
-│                    GOOGLE SERVICES                        │
-│  Gemini AI · Firebase Auth · Cloud Translate · Cloud NLP  │
-│  Google Analytics 4 · Google Fonts                        │
-├──────────────────────────────────────────────────────────┤
-│                    DATABASE (MongoDB Atlas)                │
-│  Users · ChatHistory · Checklist · QuizResult · QueryLog  │
-└──────────────────────────────────────────────────────────┘
+ElecTech transforms the complex electoral process into a seamless, interactive journey. By leveraging Google's **Gemini 2.0 Flash**, we provide:
+
+- **🗺️ Personalized Journey**: A step-by-step roadmap tailored to your registration status and location.
+- **🤖 Multilingual AI Chat**: Real-time support in 22+ Indian languages using Google Cloud Translation.
+- **📊 Readiness Score**: Dynamic assessment of your voting preparedness with smart checklists.
+- **⚡ Scenario Simulator**: Interactive "What if" simulations to prepare for any polling day situation.
+- **📅 Smart Timeline**: Automated election countdowns and critical deadline tracking.
+- **🎯 Educational Quizzes**: AI-generated quizzes to boost electoral literacy.
+
+---
+
+## 🏗️ Technical Architecture
+
+```mermaid
+graph TD
+    A[React 19 + Vite] <--> B[FastAPI Backend]
+    B <--> C[Google Gemini 2.0]
+    B <--> D[Firebase Admin Auth]
+    B <--> E[Google Cloud NLP/Translate]
+    A <--> F[Firebase Client SDK]
+    style A fill:#61DAFB,stroke:#333,stroke-width:2px
+    style B fill:#009485,stroke:#333,stroke-width:2px
+    style C fill:#8E75C2,stroke:#333,stroke-width:2px
 ```
 
----
-
-## 🛡️ Security Layers
-
-| Layer | Implementation |
-|---|---|
-| HTTP Headers | Helmet.js (XSS, MIME sniffing, CSP) |
-| CORS | Whitelisted origins only |
-| Rate Limiting | 3-tier: general (100/15m), auth (20/15m), AI (30/15m) |
-| Authentication | JWT tokens + Firebase Google OAuth |
-| Input Sanitization | express-mongo-sanitize, 1MB payload limit |
-| Password Hashing | bcrypt with salt rounds |
-| Error Handling | No stack traces in production |
-| Environment | All secrets in `.env`, never hardcoded |
+### Modern Engineering Principles
+- **Asynchronous Processing**: Non-blocking AI operations using FastAPI's `async/await`.
+- **Stateless Authentication**: Secure Firebase-backed JWT verification.
+- **Resilient AI Pipeline**: Multi-prompt strategy with fallback logic for high availability.
+- **Modular Components**: React 19 architecture with Tailwind CSS 4 for performance.
 
 ---
 
-## 🌐 Google Services Integration
+## 🛠️ Performance & Security
 
-| Service | Usage |
-|---|---|
-| **Gemini AI** (`@google/genai`) | Primary AI for chat, journey, scenarios, quiz |
-| **Firebase Auth** (`firebase-admin`) | Google Sign-In, OAuth token verification |
-| **Cloud Translation** (`@google-cloud/translate`) | Multi-language text translation (22 Indian languages) |
-| **Cloud Natural Language** (`@google-cloud/language`) | Sentiment analysis on user messages |
-| **Google Analytics 4** (`gtag.js`) | Frontend page view and event tracking |
-| **Google Fonts** | Inter typeface for premium typography |
-
----
-
-## 📡 API Endpoints
-
-### Authentication
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Register with email/password |
-| POST | `/api/auth/login` | Login with email/password |
-| POST | `/api/auth/google` | Google OAuth sign-in |
-| PUT | `/api/auth/complete-profile` | Complete user profile |
-| GET | `/api/auth/me` | Get current user session |
-
-### AI Features
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/chat` | AI chat with sentiment analysis |
-| GET | `/api/journey/:userId` | Personalized voting journey |
-| GET | `/api/timeline/:userId` | Election preparation timeline |
-| POST | `/api/booth` | Polling booth guide |
-| POST | `/api/scenario` | Election scenario simulation |
-| GET | `/api/quiz` | Election knowledge quiz |
-| POST | `/api/quiz/submit` | Submit quiz answers |
-| POST | `/api/translate` | Translate text (Google Cloud API) |
-
-### User Data
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/user/init` | Initialize user profile |
-| GET | `/api/user/:userId` | Get user details |
-| GET | `/api/checklist/:userId` | Get voter readiness checklist |
-| POST | `/api/checklist/update` | Toggle checklist item |
-| GET | `/api/analytics/insights/:userId` | User analytics insights |
-| GET | `/api/health` | System health + AI provider status |
+| Layer | Technology | Security/Performance Metric |
+| :--- | :--- | :--- |
+| **Frontend** | React 19 + Framer Motion | 60FPS Micro-animations, Lazy-loading |
+| **Backend** | FastAPI (Python) | Pydantic validation, Async execution |
+| **Auth** | Firebase Identity | OAuth 2.0, Secure Session Management |
+| **Styling** | Tailwind CSS 4 | Zero-runtime CSS, Optimized bundle size |
+| **AI Engine** | Gemini 2.0 Flash | Low-latency response, Contextual awareness |
 
 ---
 
-## 🧪 Testing
+## 🚀 Getting Started
 
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
+- Google Cloud / Firebase Project
+
+### 1. Server Setup
 ```bash
-# Run all 122 tests
-npm test
-
-# Run with coverage report
-npm run test:coverage
-
-# Run verbose mode
-npm run test:verbose
+cd server
+python -m venv venv
+source venv/bin/activate # or venv\Scripts\activate on Windows
+pip install -r requirements.txt
+python main.py
 ```
 
-### Test Suites (15)
-- **API Tests (8):** auth, chat, quiz, scenario, booth, journey, checklist, analytics
-- **Edge Cases (5):** validation, ai-fallback, mistral-fallback, security, security-audit
-- **Integration (2):** auth-flow, user-journey
-
----
-
-## 🚀 Quick Start
-
+### 2. Client Setup
 ```bash
-# Install all dependencies
-npm run install-all
-
-# Run both frontend + backend
+cd client
+npm install
 npm run dev
-
-# Frontend: http://localhost:5173
-# Backend:  http://localhost:5002
 ```
 
-### Environment Variables
-
-```env
-# Server (.env)
-MONGODB_URI=mongodb+srv://...
-JWT_SECRET=your_jwt_secret
-MISTRAL_API_KEY=your_mistral_key
-GEMINI_API_KEY=key1,key2,key3
-FIREBASE_PROJECT_ID=your_project_id
-GOOGLE_TRANSLATE_API_KEY=your_translate_key
-
-# Client (.env)
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=...
-VITE_FIREBASE_PROJECT_ID=...
-```
+### Environment Configuration
+Ensure your `.env` files are configured with the following keys:
+- `GEMINI_API_KEY`
+- `FIREBASE_PROJECT_ID`
+- `GOOGLE_APPLICATION_CREDENTIALS` (Path to JSON)
 
 ---
 
-## 📊 Tech Stack
+## 📜 Vision & Impact
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 19, Vite 6, Tailwind CSS 4, Framer Motion |
-| Backend | Node.js 20+, Express.js 4 |
-| Database | MongoDB Atlas + Mongoose 8 |
-| AI | Mistral AI, Google Gemini 2.0 Flash |
-| Auth | JWT + Firebase Admin SDK |
-| Google | Cloud Translate, Cloud NLP, Analytics 4, Fonts |
-| Testing | Jest 30, Supertest, mongodb-memory-server |
-| Security | Helmet, CORS, Rate Limiting, bcrypt, mongo-sanitize |
+ElecTech was built for the **Google Cloud VirtualPromptWar** hackathon. Our mission is to bridge the information gap in democracy using state-of-the-art AI, making the voting process transparent, accessible, and engaging for the next billion voters.
 
----
-
-## 📜 License
-
-Built for the **VirtualPromptWar** Hackathon by Google & Hack2skill.
-
-#VirtualPromptWar #GoogleCloud #Hack2Skill #BuiltWithGemini
-"# ElecTech" 
-"# ElecTech" 
-"# ElecTech" 
+**#BuiltWithGemini #GoogleCloud #Election2024 #CivicTech**

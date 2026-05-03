@@ -6,4 +6,3 @@ __pycache__
 client/node_modules
 client/dist
 server/__pycache__
-firebase-service-account.json
