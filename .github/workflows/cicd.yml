@@ -1,0 +1,346 @@
+name: StadiumMind AI — CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+# Cancel in-progress runs on new push to same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: us-central1
+  ARTIFACT_REGISTRY_REPO: stadiummind
+  API_SERVICE_NAME: stadiummind-api
+  WEB_SERVICE_NAME: stadiummind-web
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────
+  # JOB 1: Backend Tests (Pytest)
+  # ─────────────────────────────────────────────────────────────────────
+  test-backend:
+    name: "🧪 Backend Tests (Pytest)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: services/api/requirements.txt
+
+      - name: Install backend dependencies
+        run: |
+          cd services/api
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run pytest suite
+        run: |
+          python -m pytest tests/test_backend.py -v --tb=short
+        env:
+          DATABASE_URL: sqlite:///./test_stadium.db
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: .pytest_cache/
+
+  # ─────────────────────────────────────────────────────────────────────
+  # JOB 2: Frontend Typecheck & Build Validation
+  # ─────────────────────────────────────────────────────────────────────
+  test-frontend:
+    name: "🔍 Frontend Build Check (Next.js)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd apps/web
+          npm ci --legacy-peer-deps
+
+      - name: Build Next.js production bundle
+        run: |
+          cd apps/web
+          npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  # ─────────────────────────────────────────────────────────────────────
+  # JOB 3: Build & Push Docker Images to Artifact Registry
+  # Runs only on push to main/develop (not on PRs)
+  # ─────────────────────────────────────────────────────────────────────
+  build-and-push:
+    name: "🐳 Build & Push Docker Images"
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    if: github.event_name == 'push'
+
+    permissions:
+      contents: read
+      id-token: write   # Required for Workload Identity Federation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Authenticate to Google Cloud using Workload Identity Federation
+      # (no long-lived service account keys needed)
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # Configure Docker to use Artifact Registry
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # Generate image tags: short SHA + branch/latest
+      - name: Generate image metadata
+        id: meta
+        run: |
+          SHORT_SHA="${GITHUB_SHA::8}"
+          BRANCH="${GITHUB_REF_NAME//\//-}"
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "branch=${BRANCH}" >> $GITHUB_OUTPUT
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${BRANCH}" >> $GITHUB_OUTPUT
+          fi
+
+      # ── Build & Push API Image ──────────────────────────────────────
+      - name: Build API Docker image
+        run: |
+          docker build \
+            --tag "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.API_SERVICE_NAME }}:${{ steps.meta.outputs.short_sha }}" \
+            --tag "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.API_SERVICE_NAME }}:${{ steps.meta.outputs.tag }}" \
+            --label "git-commit=${{ github.sha }}" \
+            --label "build-date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --cache-from "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.API_SERVICE_NAME }}:latest" \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            ./services/api
+
+      - name: Push API Docker image
+        run: |
+          docker push "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.API_SERVICE_NAME }}:${{ steps.meta.outputs.short_sha }}"
+          docker push "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.API_SERVICE_NAME }}:${{ steps.meta.outputs.tag }}"
+
+      # ── Build & Push Web Image ──────────────────────────────────────
+      - name: Build Web Docker image
+        run: |
+          docker build \
+            --tag "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.WEB_SERVICE_NAME }}:${{ steps.meta.outputs.short_sha }}" \
+            --tag "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.WEB_SERVICE_NAME }}:${{ steps.meta.outputs.tag }}" \
+            --label "git-commit=${{ github.sha }}" \
+            --label "build-date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --cache-from "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.WEB_SERVICE_NAME }}:latest" \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            ./apps/web
+
+      - name: Push Web Docker image
+        run: |
+          docker push "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.WEB_SERVICE_NAME }}:${{ steps.meta.outputs.short_sha }}"
+          docker push "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.WEB_SERVICE_NAME }}:${{ steps.meta.outputs.tag }}"
+
+      # Save image digest for deployment job
+      - name: Output image digests
+        run: |
+          echo "API Image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.API_SERVICE_NAME }}:${{ steps.meta.outputs.short_sha }}"
+          echo "Web Image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.WEB_SERVICE_NAME }}:${{ steps.meta.outputs.short_sha }}"
+
+    outputs:
+      short_sha: ${{ steps.meta.outputs.short_sha }}
+      tag: ${{ steps.meta.outputs.tag }}
+
+  # ─────────────────────────────────────────────────────────────────────
+  # JOB 4: Deploy to Cloud Run (Production — main branch only)
+  # ─────────────────────────────────────────────────────────────────────
+  deploy-production:
+    name: "🚀 Deploy to Cloud Run (Production)"
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref_name == 'main'
+    environment:
+      name: production
+      url: https://stadiummind-web-${{ secrets.GCP_PROJECT_ID }}.a.run.app
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # ── Deploy API to Cloud Run ──────────────────────────────────────
+      - name: Deploy API to Cloud Run
+        id: deploy-api
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.API_SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.API_SERVICE_NAME }}:${{ needs.build-and-push.outputs.short_sha }}
+          flags: |
+            --allow-unauthenticated
+            --min-instances=1
+            --max-instances=10
+            --memory=512Mi
+            --cpu=1
+            --concurrency=80
+            --timeout=60s
+            --port=8000
+          env_vars: |
+            DATABASE_URL=sqlite:///./stadium_ops.db
+            ENVIRONMENT=production
+          secrets: |
+            GEMINI_API_KEY=stadiummind-gemini-api-key:latest
+
+      # ── Deploy Web to Cloud Run ─────────────────────────────────────
+      - name: Deploy Web to Cloud Run
+        id: deploy-web
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.WEB_SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.WEB_SERVICE_NAME }}:${{ needs.build-and-push.outputs.short_sha }}
+          flags: |
+            --allow-unauthenticated
+            --min-instances=1
+            --max-instances=10
+            --memory=1Gi
+            --cpu=1
+            --concurrency=80
+            --timeout=60s
+            --port=3000
+          env_vars: |
+            NODE_ENV=production
+            NEXT_PUBLIC_API_BASE_URL=${{ steps.deploy-api.outputs.url }}/api
+
+      - name: Print deployment URLs
+        run: |
+          echo "✅ API deployed at: ${{ steps.deploy-api.outputs.url }}"
+          echo "✅ Web deployed at: ${{ steps.deploy-web.outputs.url }}"
+
+      # ── Post deployment smoke test ───────────────────────────────────
+      - name: Smoke test — API health check
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.deploy-api.outputs.url }}/docs")
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ API health check failed with status $STATUS"
+            exit 1
+          fi
+          echo "✅ API responded 200 OK"
+
+      - name: Smoke test — Web health check
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.deploy-web.outputs.url }}")
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Web health check failed with status $STATUS"
+            exit 1
+          fi
+          echo "✅ Web responded 200 OK"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # JOB 5: Deploy to Cloud Run (Staging — develop branch only)
+  # ─────────────────────────────────────────────────────────────────────
+  deploy-staging:
+    name: "🧪 Deploy to Cloud Run (Staging)"
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref_name == 'develop'
+    environment:
+      name: staging
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy API to staging Cloud Run
+        id: deploy-api-staging
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.API_SERVICE_NAME }}-staging
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.API_SERVICE_NAME }}:${{ needs.build-and-push.outputs.short_sha }}
+          flags: |
+            --allow-unauthenticated
+            --min-instances=0
+            --max-instances=3
+            --memory=512Mi
+            --cpu=1
+            --port=8000
+          env_vars: |
+            DATABASE_URL=sqlite:///./stadium_ops.db
+            ENVIRONMENT=staging
+          secrets: |
+            GEMINI_API_KEY=stadiummind-gemini-api-key:latest
+
+      - name: Deploy Web to staging Cloud Run
+        id: deploy-web-staging
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.WEB_SERVICE_NAME }}-staging
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.WEB_SERVICE_NAME }}:${{ needs.build-and-push.outputs.short_sha }}
+          flags: |
+            --allow-unauthenticated
+            --min-instances=0
+            --max-instances=3
+            --memory=1Gi
+            --cpu=1
+            --port=3000
+          env_vars: |
+            NODE_ENV=staging
+            NEXT_PUBLIC_API_BASE_URL=${{ steps.deploy-api-staging.outputs.url }}/api
+
+      - name: Print staging URLs
+        run: |
+          echo "🔬 Staging API: ${{ steps.deploy-api-staging.outputs.url }}"
+          echo "🔬 Staging Web: ${{ steps.deploy-web-staging.outputs.url }}"
