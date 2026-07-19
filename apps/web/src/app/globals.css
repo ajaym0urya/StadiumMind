@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 224 71% 4%;
+    --foreground: 210 20% 98%;
+    --card: 224 71% 7%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 263.4 70% 50.4%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+    --accent: 215 27.9% 16.9%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 263.4 70% 50.4%;
+    --radius: 0.75rem;
+  }
+}
+
+/* High Contrast Accessibility Override */
+.theme-high-contrast {
+  --background: 0 0% 0% !important;
+  --foreground: 0 0% 100% !important;
+  --card: 0 0% 0% !important;
+  --card-foreground: 0 0% 100% !important;
+  --border: 0 0% 100% !important;
+  --primary: 60 100% 50% !important; /* Yellow */
+  --primary-foreground: 0 0% 0% !important;
+  --secondary: 180 100% 50% !important; /* Cyan */
+  --secondary-foreground: 0 0% 0% !important;
+  --muted-foreground: 0 0% 90% !important;
+}
+
+/* Large Font Accessibility Override */
+.theme-large-font {
+  font-size: 1.15rem !important;
+}
+.theme-large-font h1 {
+  font-size: 2.5rem !important;
+}
+.theme-large-font h2 {
+  font-size: 2rem !important;
+}
+.theme-large-font button,
+.theme-large-font input,
+.theme-large-font select {
+  font-size: 1.25rem !important;
+  padding: 0.75rem 1.25rem !important;
+}
+
+body {
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+  font-family: 'Outfit', 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(18, 20, 32, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-contrast {
+  background: #000000 !important;
+  border: 2px solid #ffffff !important;
+}
+
+/* Pulse keyframes for custom map densities */
+@keyframes map-pulse-critical {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  50% { transform: scale(1.3); opacity: 0.4; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes map-pulse-nominal {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 0.3; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+.animate-pulse-critical {
+  animation: map-pulse-critical 2s infinite ease-out;
+}
+
+.animate-pulse-nominal {
+  animation: map-pulse-nominal 2.5s infinite ease-out;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
