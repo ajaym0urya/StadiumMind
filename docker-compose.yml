@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  # ─────────────────────────────────────
+  # FastAPI Backend Service
+  # ─────────────────────────────────────
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    container_name: stadiummind-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./stadium_ops.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ENVIRONMENT=development
+    volumes:
+      # Mount DB for persistence across restarts in dev
+      - api_data:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - stadiummind-net
+
+  # ─────────────────────────────────────
+  # Next.js Frontend Service
+  # ─────────────────────────────────────
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: stadiummind-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_BASE_URL=http://api:8000/api
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - stadiummind-net
+
+volumes:
+  api_data:
+
+networks:
+  stadiummind-net:
+    driver: bridge
