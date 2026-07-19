@@ -30,6 +30,6 @@ EXPOSE 8000
 # Health check for Cloud Run load balancer
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD curl -f http://localhost:8000/docs || exit 1
-
+ 
 # Production startup command (no --reload)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
